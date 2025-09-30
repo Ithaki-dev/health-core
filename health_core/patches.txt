@@ -1,0 +1,4 @@
+# Patches for health_core
+# List of patches that need to be applied in sequence
+# Format: path.to.patch_file
+# Example: health_core.patches.v1_0.update_email_settings

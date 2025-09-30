@@ -1,0 +1,8 @@
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_user": "TU_EMAIL_AQUI@gmail.com",
+  "smtp_password": "TU_PASSWORD_DE_APLICACION_AQUI",
+  "smtp_use_tls": 1,
+  "smtp_use_ssl": 0
+}

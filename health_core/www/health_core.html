@@ -1,0 +1,196 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ _("SMTP Configuration") }}{% endblock %}
+
+{% block page_content %}
+<div class="container">
+	<div class="row">
+		<div class="col-md-12">
+			<h1>{{ _("Health Core SMTP Configuration") }}</h1>
+			<p class="text-muted">{{ _("Simple test to show current SMTP status") }}</p>
+			
+			<div id="smtp-status-card" class="card mb-4">
+				<div class="card-header">
+					<h5 class="card-title mb-0">{{ _("Current Configuration Status") }}</h5>
+				</div>
+				<div class="card-body">
+					<div id="status-content">
+						<div class="text-center">
+							<div class="spinner-border" role="status">
+								<span class="sr-only">Loading...</span>
+							</div>
+							<p class="mt-2">{{ _("Loading configuration status...") }}</p>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Simple debug info -->
+			<div class="card">
+				<div class="card-header">
+					<h5>Debug Information</h5>
+				</div>
+				<div class="card-body">
+					<div id="debug-info">
+						<p>JavaScript loading...</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<style>
+.status-success { color: #28a745; }
+.status-warning { color: #ffc107; }
+.status-error { color: #dc3545; }
+
+.card {
+	box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+	border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.spinner-border {
+	width: 2rem;
+	height: 2rem;
+}
+</style>
+
+<script>
+console.log('Script tag loaded');
+
+function updateDebugInfo(message) {
+	document.getElementById('debug-info').innerHTML = '<p>' + message + '</p>';
+}
+
+function loadSMTPStatus() {
+	console.log('Loading SMTP status...');
+	updateDebugInfo('Attempting to load SMTP status...');
+	
+	// Try with frappe.call first
+	if (typeof frappe !== 'undefined' && frappe.call) {
+		console.log('Using frappe.call');
+		updateDebugInfo('Using frappe.call method...');
+		
+		frappe.call({
+			method: 'health_core.api.get_smtp_status',
+			callback: function(response) {
+				console.log('SMTP Status Response:', response);
+				updateDebugInfo('Frappe call successful! Response: ' + JSON.stringify(response));
+				if (response.message) {
+					displaySMTPStatus(response.message);
+				}
+			},
+			error: function(error) {
+				console.error('SMTP Status Error:', error);
+				updateDebugInfo('Frappe call error: ' + JSON.stringify(error));
+				displaySMTPStatus({
+					status: 'error',
+					message: 'Failed to load via frappe.call: ' + (error.message || 'Unknown error'),
+					configured: false
+				});
+			}
+		});
+	} else {
+		// Fallback to fetch API
+		console.log('Using fetch API');
+		updateDebugInfo('Frappe not available, using fetch API...');
+		
+		fetch('/api/method/health_core.api.get_smtp_status')
+			.then(response => response.json())
+			.then(data => {
+				console.log('Fetch Response:', data);
+				updateDebugInfo('Fetch successful! Response: ' + JSON.stringify(data));
+				if (data.message) {
+					displaySMTPStatus(data.message);
+				}
+			})
+			.catch(error => {
+				console.error('Fetch Error:', error);
+				updateDebugInfo('Fetch error: ' + error.message);
+				displaySMTPStatus({
+					status: 'error',
+					message: 'Failed to load via fetch: ' + error.message,
+					configured: false
+				});
+			});
+	}
+}
+
+function displaySMTPStatus(status) {
+	console.log('Displaying status:', status);
+	
+	let statusHtml = '';
+	let statusClass = 'status-' + status.status;
+	let iconClass = '';
+	
+	switch(status.status) {
+		case 'success':
+			iconClass = 'fas fa-check-circle';
+			break;
+		case 'warning':
+			iconClass = 'fas fa-exclamation-triangle';
+			break;
+		case 'error':
+			iconClass = 'fas fa-times-circle';
+			break;
+	}
+	
+	statusHtml = `
+		<div class="d-flex align-items-center ${statusClass}">
+			<i class="${iconClass} fa-2x mr-3"></i>
+			<div>
+				<h6 class="mb-1">${status.message}</h6>
+				${status.account_details ? `
+					<small>
+						Account: ${status.account_details.email_account_name || 'Unknown'} 
+						(${status.account_details.email_id || 'No email'})
+					</small>
+				` : ''}
+			</div>
+		</div>
+	`;
+	
+	document.getElementById('status-content').innerHTML = statusHtml;
+	updateDebugInfo('Status displayed successfully!');
+}
+
+// Initialize when page loads
+function initializePage() {
+	console.log('Initializing page...');
+	updateDebugInfo('Page initialized, loading SMTP status...');
+	loadSMTPStatus();
+}
+
+// Multiple initialization methods to ensure it works
+console.log('Setting up initialization...');
+
+// Method 1: DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+	console.log('DOMContentLoaded fired');
+	updateDebugInfo('DOMContentLoaded fired, initializing...');
+	initializePage();
+});
+
+// Method 2: Window load
+window.addEventListener('load', function() {
+	console.log('Window load fired');
+	// Only run if not already initialized
+	if (document.getElementById('debug-info').innerHTML.includes('JavaScript loading...')) {
+		updateDebugInfo('Window load fired, initializing...');
+		initializePage();
+	}
+});
+
+// Method 3: Frappe ready (if available)
+if (typeof frappe !== 'undefined' && frappe.ready) {
+	frappe.ready(function() {
+		console.log('Frappe ready fired');
+		updateDebugInfo('Frappe ready fired, initializing...');
+		initializePage();
+	});
+}
+
+console.log('Script setup complete');
+</script>
+{% endblock %}
